@@ -1,0 +1,19 @@
+---
+- hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Create hello.txt
+      copy:
+        content: "hello world"
+        dest: /tmp/hello.txt
+      register: hello_file_result
+
+    - name: Wait for 5 seconds
+      pause:
+        seconds: 5
+    - name: ping localhost
+      ping:
+    - name: Fail if hello.txt was created/changed
+      fail:
+        msg: "I have a failure here"
+      when: hello_file_result.changed
