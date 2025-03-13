@@ -1,0 +1,49 @@
+stages:
+  - cleanup
+  - fail
+  - success
+
+before_script:
+  - python3 -m venv venv  # Ensure venv exists
+  - source venv/bin/activate
+  - pip install --upgrade pip
+  - pip install -r requirements.txt  # Pre-install dependencies for all jobs
+
+# 🔹 Cleanup Job (Runs Automatically)
+auto_cleanup_job:
+  stage: cleanup
+  tags:
+    - shell
+  script:
+    - source venv/bin/activate
+    - rm -f /tmp/hello.txt
+  when: always  # Runs automatically when scheduled
+
+# 🔹 Fail Job (Triggered After Cleanup, Includes Sleep)
+auto_fail_job:
+  stage: fail
+  tags:
+    - shell
+  script:
+    - source venv/bin/activate
+    - echo "Sleeping for $SLEEP_DURATION minutes..."
+    - sleep $((SLEEP_DURATION * 60))  # Convert minutes to seconds
+    - source ./variables
+    - ansible-playbook playbook.yml || exit 1
+  allow_failure: true
+  when: on_success  # Runs automatically after cleanup
+  needs:
+    - auto_cleanup_job  # Runs only if cleanup is completed
+
+# 🔹 Success Job (Triggered After Fail Job)
+auto_success_job:
+  stage: success
+  tags:
+    - shell
+  script:
+    - source venv/bin/activate
+    - source ./variables
+    - ansible-playbook playbook.yml
+  when: on_success  # Runs automatically after fail job (even if fail job fails)
+  needs:
+    - auto_fail_job
